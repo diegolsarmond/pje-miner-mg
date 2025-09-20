@@ -12,7 +12,8 @@ COPY package*.json ./
 COPY bun.lockb ./
 
 # Install dependencies
-RUN npm ci --only=production
+# We need devDependencies (like Vite) present during the build stage, so do not omit them here.
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
