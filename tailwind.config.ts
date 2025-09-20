@@ -39,6 +39,11 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        legal: {
+          blue: "hsl(var(--legal-blue))",
+          "blue-light": "hsl(var(--legal-blue-light))",
+          "blue-dark": "hsl(var(--legal-blue-dark))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
