@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  pje-scraper:
+    build: .
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pje-scraper.rule=Host(`your-domain.com`)"
+      - "traefik.http.routers.pje-scraper.tls=true"
+      - "traefik.http.routers.pje-scraper.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pje-scraper.loadbalancer.server.port=80"

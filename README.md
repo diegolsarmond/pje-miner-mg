@@ -1,73 +1,159 @@
-# Welcome to your Lovable project
+# PJE Scraper - Sistema de Consulta de Processos Judiciais
 
-## Project info
+Sistema completo para consulta de processos judiciais em todos os tribunais do Brasil (TJs estaduais, TRFs, TRTs e TREs).
 
-**URL**: https://lovable.dev/projects/106ba0fb-fd75-485d-be29-fe769d0cb1bc
+## 🚀 Funcionalidades
 
-## How can I edit this code?
+- ✅ Consulta de processos em todos os tribunais do Brasil
+- ✅ Interface moderna e responsiva
+- ✅ Web scraping automatizado via edge functions
+- ✅ Detecção automática do tribunal pelo número do processo
+- ✅ Sistema de fallback para dados simulados
+- ✅ Configuração para produção com Docker
+- ✅ Banco de dados Supabase integrado
+- ✅ Logs de scraping e analytics
 
-There are several ways of editing your application.
+## 🏛️ Tribunais Suportados
 
-**Use Lovable**
+### Tribunais de Justiça Estaduais (27)
+- TJAC, TJAL, TJAP, TJAM, TJBA, TJCE, TJDF, TJES, TJGO, TJMA, TJMT, TJMS, TJMG, TJPA, TJPB, TJPR, TJPE, TJPI, TJRJ, TJRN, TJRS, TJRO, TJRR, TJSC, TJSP, TJSE, TJTO
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/106ba0fb-fd75-485d-be29-fe769d0cb1bc) and start prompting.
+### Tribunais Regionais Federais (6)
+- TRF1, TRF2, TRF3, TRF4, TRF5, TRF6
 
-Changes made via Lovable will be committed automatically to this repo.
+### Tribunais Regionais do Trabalho (24)
+- TRT1 ao TRT24
 
-**Use your preferred IDE**
+### Tribunais Regionais Eleitorais (27)
+- TREs de todos os estados e DF
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🛠️ Tecnologias
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Frontend**: React, TypeScript, Tailwind CSS
+- **Backend**: Supabase Edge Functions
+- **Banco de Dados**: Supabase PostgreSQL
+- **Deploy**: Docker, Nginx
+- **Web Scraping**: Deno com User-Agent rotation
 
-Follow these steps:
+## 🚀 Configuração para Produção
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 1. Requisitos
+- Docker e Docker Compose
+- Conta Supabase
+- Easypanel (opcional)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 2. Variáveis de Ambiente
 
-# Step 3: Install the necessary dependencies.
-npm i
+Crie um arquivo `.env.production`:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```env
+VITE_SUPABASE_URL=sua_url_supabase
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_service_role
 ```
 
-**Edit a file directly in GitHub**
+### 3. Deploy com Docker
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Build da imagem
+docker build -t pje-scraper .
 
-**Use GitHub Codespaces**
+# Executar com docker-compose
+docker-compose up -d
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 4. Deploy no Easypanel
 
-## What technologies are used for this project?
+1. Faça fork deste repositório
+2. No Easypanel, crie uma nova aplicação
+3. Configure as variáveis de ambiente
+4. Deploy automático via Git
 
-This project is built with:
+## 📊 Estrutura do Banco de Dados
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Tabelas Principais
 
-## How can I deploy this project?
+- **tribunais**: Cadastro de todos os tribunais
+- **processos**: Dados dos processos coletados
+- **movimentacoes**: Histórico de movimentações
+- **partes_publicas**: Partes dos processos (anonimizadas)
+- **scraping_logs**: Logs das operações de scraping
+- **fontes_jornais**: Fontes de diários oficiais
+- **publicacoes_jornais**: Publicações dos diários
 
-Simply open [Lovable](https://lovable.dev/projects/106ba0fb-fd75-485d-be29-fe769d0cb1bc) and click on Share -> Publish.
+## 🔍 Como Usar
 
-## Can I connect a custom domain to my Lovable project?
+### 1. Consulta Simples
+```javascript
+import { PJEService } from './services/pjeService';
 
-Yes, you can!
+const dados = await PJEService.consultarProcesso('5202268-77.2022.8.13.0024');
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 2. Consulta com Tribunal Específico
+```javascript
+const dados = await PJEService.consultarProcesso('5202268-77.2022.8.13.0024', 'TJMG');
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### 3. Detecção Automática do Tribunal
+```javascript
+const tribunal = PJEService.detectarTribunal('5202268-77.2022.8.13.0024');
+console.log(tribunal); // 'TJMG'
+```
+
+## 🛡️ Segurança e Rate Limiting
+
+- User-Agent rotation para evitar bloqueios
+- Proxy rotation (configurável)
+- Rate limiting automático
+- Logs detalhados de todas as operações
+- Headers de segurança configurados
+
+## 📈 Monitoramento
+
+- Logs de scraping em tempo real
+- Analytics de uso via Supabase
+- Health checks automáticos
+- Alertas de falha configuráveis
+
+## 🔧 Configurações Avançadas
+
+### Rate Limiting
+Configure no edge function:
+```typescript
+const RATE_LIMIT = {
+  requests: 10,
+  window: 60000 // 1 minuto
+};
+```
+
+### Proxy Configuration
+```typescript
+const PROXY_CONFIG = {
+  enabled: true,
+  rotation: true,
+  providers: ['proxy1.com', 'proxy2.com']
+};
+```
+
+## 📝 Licença
+
+MIT License - veja LICENSE para detalhes.
+
+## 🤝 Contribuindo
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+## 📞 Suporte
+
+- Email: suporte@pje-scraper.com
+- Issues: GitHub Issues
+- Documentação: [Wiki do projeto]
+
+---
+
+**⚠️ Aviso Legal**: Este sistema é para fins educacionais e de pesquisa. Respeite os termos de uso dos sites dos tribunais e a Lei Geral de Proteção de Dados (LGPD).

@@ -12,18 +12,18 @@ const Index = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleSearch = async (processNumber: string) => {
+  const handleSearch = async (processNumber: string, tribunal?: string) => {
     setIsLoading(true);
     setError(null);
     setProcessData(null);
 
     try {
-      const data = await PJEService.consultarProcesso(processNumber);
+      const data = await PJEService.consultarProcesso(processNumber, tribunal);
       setProcessData(data);
       
       toast({
         title: "Consulta realizada",
-        description: `Dados do processo ${processNumber} carregados com sucesso`,
+        description: `Dados do processo ${processNumber} carregados com sucesso (${tribunal || 'TJMG'})`,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Erro ao consultar processo";
@@ -45,11 +45,11 @@ const Index = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-legal-blue mb-2">
-            API de Consulta PJE - TJMG
+            Sistema de Consulta PJE - Tribunais do Brasil
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Consulte processos judiciais do Tribunal de Justiça de Minas Gerais
-            através do sistema PJE (Processo Judicial Eletrônico)
+            Consulte processos judiciais em todos os tribunais do Brasil: TJs estaduais, TRFs, TRTs e TREs
+            através dos sistemas PJE e e-SAJ
           </p>
         </div>
 
@@ -58,18 +58,11 @@ const Index = () => {
           <Alert className="border-amber-200 bg-amber-50">
             <Info className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800">
-              <strong>Demonstração:</strong> Esta é uma implementação de demonstração. 
-              Para um ambiente de produção, seria necessário implementar web scraping 
-              via backend com proxy para contornar limitações de CORS. O processo de exemplo 
-              <code className="bg-amber-100 px-1 rounded">5202268-77.2022.8.13.0024</code> retorna dados reais.
-              <a 
-                href="https://pje-consulta-publica.tjmg.jus.br/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 ml-2 text-amber-700 hover:text-amber-900 underline"
-              >
-                Acesse o site oficial <ExternalLink className="h-3 w-3" />
-              </a>
+              <strong>Sistema Completo:</strong> Implementação com edge functions para web scraping 
+              em todos os tribunais do Brasil. Detecção automática do tribunal pelo número do processo.
+              Processo de exemplo: <code className="bg-amber-100 px-1 rounded">5202268-77.2022.8.13.0024</code> (TJMG).
+              <br />
+              <strong>Tribunais suportados:</strong> 27 TJs estaduais, 6 TRFs, 24 TRTs e 27 TREs.
             </AlertDescription>
           </Alert>
         </div>

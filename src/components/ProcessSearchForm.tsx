@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { PJEService } from "@/services/pjeService";
 
 interface ProcessSearchFormProps {
-  onSearch: (processNumber: string) => void;
+  onSearch: (processNumber: string, tribunal?: string) => void;
   isLoading: boolean;
 }
 
@@ -27,8 +28,7 @@ export const ProcessSearchForm = ({ onSearch, isLoading }: ProcessSearchFormProp
     }
 
     // Validação básica do formato do número do processo
-    const processRegex = /^\d{7}-\d{2}\.\d{4}\.\d{1}\.\d{2}\.\d{4}$/;
-    if (!processRegex.test(processNumber)) {
+    if (!PJEService.validarNumeroProcesso(processNumber)) {
       toast({
         title: "Formato inválido",
         description: "Use o formato: NNNNNNN-NN.AAAA.N.NN.NNNN",
@@ -37,7 +37,15 @@ export const ProcessSearchForm = ({ onSearch, isLoading }: ProcessSearchFormProp
       return;
     }
 
-    onSearch(processNumber);
+    // Detectar tribunal automaticamente
+    const tribunalDetectado = PJEService.detectarTribunal(processNumber);
+    
+    toast({
+      title: "Tribunal detectado",
+      description: `Consultando no ${tribunalDetectado}`,
+    });
+
+    onSearch(processNumber, tribunalDetectado);
   };
 
   const formatProcessNumber = (value: string) => {
@@ -73,9 +81,9 @@ export const ProcessSearchForm = ({ onSearch, isLoading }: ProcessSearchFormProp
             <FileText className="h-6 w-6 text-legal-blue" />
           </div>
         </div>
-        <CardTitle className="text-xl font-bold text-legal-blue">Consulta PJE - TJMG</CardTitle>
+        <CardTitle className="text-xl font-bold text-legal-blue">Consulta PJE - Tribunais do Brasil</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Digite o número do processo para consultar
+          Digite o número do processo para consultar em qualquer tribunal
         </p>
       </CardHeader>
       <CardContent>

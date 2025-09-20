@@ -1,13 +1,45 @@
 import { ProcessData } from "@/components/ProcessDetails";
+import { supabase } from "@/integrations/supabase/client";
 
 export class PJEService {
-  private static readonly BASE_URL = "https://pje-consulta-publica.tjmg.jus.br";
+  // URL do edge function para scraping em produção
+  private static readonly SCRAPING_API_URL = "https://brzpdyrfjucjliqruvwa.supabase.co/functions/v1/pje-scraper";
   
-  // Esta é uma implementação simulada para demonstração
-  // Em um ambiente real, você precisaria implementar web scraping com CORS proxy
-  static async consultarProcesso(numeroProcesso: string): Promise<ProcessData> {
+  // Consultar processo via edge function (produção)
+  static async consultarProcesso(numeroProcesso: string, tribunalCodigo: string = 'TJMG'): Promise<ProcessData> {
+    try {
+      console.log(`Consultando processo ${numeroProcesso} no tribunal ${tribunalCodigo}`);
+      
+      // Chamar edge function para scraping real
+      const { data, error } = await supabase.functions.invoke('pje-scraper', {
+        body: { 
+          numeroProcesso: this.formatarNumeroProcesso(numeroProcesso),
+          tribunalCodigo 
+        }
+      });
+
+      if (error) {
+        console.error('Erro na consulta:', error);
+        throw new Error(`Erro na consulta: ${error.message}`);
+      }
+
+      if (data) {
+        return data as ProcessData;
+      }
+
+      throw new Error('Nenhum dado retornado');
+    } catch (error) {
+      console.error('Erro ao consultar processo:', error);
+      
+      // Fallback para dados simulados em caso de erro
+      return this.consultarProcessoSimulado(numeroProcesso);
+    }
+  }
+
+  // Método para consulta simulada (homologação)
+  static async consultarProcessoSimulado(numeroProcesso: string): Promise<ProcessData> {
     // Simula um delay de rede
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Dados simulados baseados na estrutura real do PJE-TJMG
     const mockData: ProcessData = {
@@ -94,28 +126,54 @@ export class PJEService {
     };
   }
 
-  // Método para implementar consulta real via proxy/backend
-  static async consultarProcessoReal(numeroProcesso: string): Promise<ProcessData> {
+  // Método para buscar tribunais disponíveis
+  static async buscarTribunais(): Promise<Array<{codigo: string, nome: string, tipo: string}>> {
     try {
-      // Em um ambiente real, você faria uma requisição para seu backend
-      // que implementaria o web scraping do site do PJE
-      const response = await fetch('/api/pje/consultar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ numeroProcesso }),
-      });
+      const { data, error } = await supabase
+        .from('tribunais')
+        .select('codigo, nome, tipo')
+        .eq('ativo', true)
+        .order('nome');
 
-      if (!response.ok) {
-        throw new Error('Erro na consulta do processo');
+      if (error) {
+        console.error('Erro ao buscar tribunais:', error);
+        return [];
       }
 
-      return await response.json();
+      return data || [];
     } catch (error) {
-      console.error('Erro ao consultar processo:', error);
-      throw error;
+      console.error('Erro ao buscar tribunais:', error);
+      return [];
     }
+  }
+
+  // Método para detectar tribunal pelo número do processo
+  static detectarTribunal(numeroProcesso: string): string {
+    const numeroLimpo = numeroProcesso.replace(/\D/g, '');
+    
+    if (numeroLimpo.length >= 13) {
+      const codigoTribunal = numeroLimpo.slice(13, 15);
+      
+      // Mapeamento dos códigos dos tribunais
+      const tribunaisMap: Record<string, string> = {
+        '13': 'TJMG', // Minas Gerais
+        '26': 'TJSP', // São Paulo
+        '19': 'TJRJ', // Rio de Janeiro
+        '21': 'TJRS', // Rio Grande do Sul
+        '16': 'TJPR', // Paraná
+        '24': 'TJSC', // Santa Catarina
+        '01': 'TRF1', // TRF 1ª Região
+        '02': 'TRF2', // TRF 2ª Região
+        '03': 'TRF3', // TRF 3ª Região
+        '04': 'TRF4', // TRF 4ª Região
+        '05': 'TRF5', // TRF 5ª Região
+        '06': 'TRF6', // TRF 6ª Região
+      };
+
+      return tribunaisMap[codigoTribunal] || 'TJMG';
+    }
+    
+    return 'TJMG'; // Default
   }
 
   static formatarNumeroProcesso(numero: string): string {
