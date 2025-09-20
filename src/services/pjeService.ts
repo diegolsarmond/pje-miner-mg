@@ -120,33 +120,117 @@ export class PJEService {
   
   // Consultar processo via edge function (produção)
   static async consultarProcesso(numeroProcesso: string, tribunalCodigo: string = 'TJMG'): Promise<ProcessData> {
-    try {
-      console.log(`Consultando processo ${numeroProcesso} no tribunal ${tribunalCodigo}`);
-      
-      // Chamar edge function para scraping real
-      const { data, error } = await supabase.functions.invoke('pje-scraper', {
-        body: { 
-          numeroProcesso: this.formatarNumeroProcesso(numeroProcesso),
-          tribunalCodigo 
-        }
-      });
+    console.log(`Consultando processo ${numeroProcesso} no tribunal ${tribunalCodigo}`);
 
-      if (error) {
-        console.error('Erro na consulta:', error);
-        throw new Error(`Erro na consulta: ${error.message}`);
+    const numeroFormatado = this.formatarNumeroProcesso(numeroProcesso);
+    const { data, error, response } = await supabase.functions.invoke<ProcessData>('pje-scraper', {
+      body: {
+        numeroProcesso: numeroFormatado,
+        tribunalCodigo
       }
+    });
 
-      if (data) {
-        return data as ProcessData;
-      }
+    if (error) {
+      console.error('Erro na consulta:', error);
 
-      throw new Error('Nenhum dado retornado');
-    } catch (error) {
-      console.error('Erro ao consultar processo:', error);
-      
-      // Fallback para dados simulados em caso de erro
-      return this.consultarProcessoSimulado(numeroProcesso);
+      const message = await this.extrairMensagemDeErro(error, response);
+      throw new Error(message);
     }
+
+    if (!data) {
+      throw new Error('Nenhum dado retornado pela função de scraping');
+    }
+
+    return data;
+  }
+
+  private static async extrairMensagemDeErro(error: unknown, response?: Response): Promise<string> {
+    const defaultMessage = error instanceof Error ? error.message : 'Erro ao consultar processo';
+
+    const parseBody = async (res: Response): Promise<string | undefined> => {
+      try {
+        const clone = res.clone();
+        const json = await clone.json().catch(() => undefined);
+
+        if (json && typeof json === 'object') {
+          const possibleMessage =
+            typeof (json as Record<string, unknown>).error === 'string'
+              ? (json as Record<string, unknown>).error
+              : typeof (json as Record<string, unknown>).message === 'string'
+                ? (json as Record<string, unknown>).message
+                : undefined;
+
+          if (possibleMessage && possibleMessage.trim()) {
+            return possibleMessage;
+          }
+        }
+
+        const text = await res.text();
+        if (text && text.trim()) {
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed === 'object') {
+              const parsedMessage =
+                typeof (parsed as Record<string, unknown>).error === 'string'
+                  ? (parsed as Record<string, unknown>).error
+                  : typeof (parsed as Record<string, unknown>).message === 'string'
+                    ? (parsed as Record<string, unknown>).message
+                    : undefined;
+
+              if (parsedMessage && parsedMessage.trim()) {
+                return parsedMessage;
+              }
+            }
+          } catch (jsonError) {
+            console.warn('Resposta de erro não está em JSON, retornando texto bruto', jsonError);
+          }
+
+          return text;
+        }
+      } catch (parseError) {
+        console.warn('Não foi possível ler o corpo da resposta de erro', parseError);
+      }
+
+      return undefined;
+    };
+
+    const context = (error as { context?: unknown })?.context;
+    const responseCandidate = response ?? (typeof Response !== 'undefined' && context instanceof Response ? context : undefined);
+
+    if (responseCandidate) {
+      const parsedMessage = await parseBody(responseCandidate);
+      if (parsedMessage) {
+        return parsedMessage;
+      }
+    }
+
+    const contextBody = (context as { body?: unknown })?.body;
+    if (typeof contextBody === 'string' && contextBody.trim()) {
+      try {
+        const parsed = JSON.parse(contextBody);
+        if (parsed && typeof parsed === 'object') {
+          const parsedMessage =
+            typeof (parsed as Record<string, unknown>).error === 'string'
+              ? (parsed as Record<string, unknown>).error
+              : typeof (parsed as Record<string, unknown>).message === 'string'
+                ? (parsed as Record<string, unknown>).message
+                : undefined;
+
+          if (parsedMessage && parsedMessage.trim()) {
+            return parsedMessage;
+          }
+        }
+      } catch {
+        return contextBody;
+      }
+    }
+
+    const details = (error as { details?: unknown })?.details;
+    if (typeof details === 'string' && details.trim()) {
+      return details;
+    }
+
+    return defaultMessage || 'Erro desconhecido ao consultar processo';
   }
 
   // Método para consulta simulada (homologação)
