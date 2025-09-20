@@ -1,6 +1,119 @@
 import { ProcessData } from "@/components/ProcessDetails";
 import { supabase } from "@/integrations/supabase/client";
 
+const SIMULATED_PROCESSES: Record<string, ProcessData> = {
+  "5202268-77.2022.8.13.0024": {
+    numero: "5202268-77.2022.8.13.0024",
+    dataDistribuicao: "21/09/2022",
+    classeJudicial: "[CÍVEL] CUMPRIMENTO DE SENTENÇA (156)",
+    assunto:
+      "DIREITO CIVIL (899) - Responsabilidade Civil (10431) - Indenização por Dano Moral (10433 DIREITO DO CONSUMIDOR (1156) - Responsabilidade do Fornecedor (6220) - Indenização por Dano Moral (7779 DIREITO DO CONSUMIDOR (1156) - Responsabilidade do Fornecedor (6220) - Indenização por Dano Material (7780",
+    jurisdicao: "Belo Horizonte",
+    orgaoJulgador: "CENTRASE Cível de Belo Horizonte - Central de Cumprimento de Sentenças",
+    poloAtivo: [
+      {
+        nome: "DIEGO LEONARDO DA SILVA ARMOND",
+        cpf: "115.451.116-26",
+        situacao: "Ativo",
+        tipo: "REQUERENTE"
+      }
+    ],
+    poloPassivo: [
+      {
+        nome: "OI S.A. - EM RECUPERAÇÃO JUDICIAL",
+        cnpj: "76.535.764/0001-43",
+        situacao: "Ativo",
+        tipo: "REQUERIDO(A)"
+      }
+    ],
+    movimentacoes: [
+      {
+        data: "03/09/2025 13.05.25",
+        movimento: "Juntada de Petição de petição"
+      },
+      {
+        data: "02/09/2025 00.26.53",
+        movimento: "Publicado Intimação em 02/09/2025"
+      },
+      {
+        data: "02/09/2025 00.26.53",
+        movimento: "Disponibilizado no DJ Eletrônico em 01/09/2025"
+      },
+      {
+        data: "29/08/2025 14.42.00",
+        movimento: "Expedida/certificada a comunicação eletrônica"
+      },
+      {
+        data: "22/04/2025 14.57.18",
+        movimento: "Juntada de Petição de petição"
+      },
+      {
+        data: "11/04/2025 13.55.11",
+        movimento: "Juntada de Petição de petição"
+      },
+      {
+        data: "29/03/2025 00.29.18",
+        movimento: "Decorrido prazo de OI S.A. - EM RECUPERAÇÃO JUDICIAL em 28/03/2025 23.59"
+      },
+      {
+        data: "19/03/2025 15.48.44",
+        movimento: "Juntada de Petição de petição"
+      }
+    ]
+  },
+  "5035105-09.2021.8.13.0024": {
+    numero: "5035105-09.2021.8.13.0024",
+    dataDistribuicao: "12/11/2021",
+    classeJudicial: "[CÍVEL] PROCEDIMENTO COMUM CÍVEL",
+    assunto:
+      "DIREITO DO CONSUMIDOR - Contratos Bancários - Renegociação de Dívida",
+    jurisdicao: "Belo Horizonte",
+    orgaoJulgador: "27ª Vara Cível da Comarca de Belo Horizonte",
+    poloAtivo: [
+      {
+        nome: "ANA PAULA FERREIRA",
+        cpf: "082.917.334-00",
+        situacao: "Ativo",
+        tipo: "REQUERENTE"
+      }
+    ],
+    poloPassivo: [
+      {
+        nome: "BANCO ATLÂNTICO S.A.",
+        cnpj: "01.234.567/0001-89",
+        situacao: "Ativo",
+        tipo: "REQUERIDO(A)"
+      }
+    ],
+    movimentacoes: [
+      {
+        data: "08/08/2024 16.42.10",
+        movimento: "Concluso para decisão"
+      },
+      {
+        data: "02/07/2024 11.03.55",
+        movimento: "Juntada de petição de manifestação da parte autora"
+      },
+      {
+        data: "25/06/2024 09.14.21",
+        movimento: "Expedida intimação via DJe"
+      },
+      {
+        data: "12/05/2024 10.27.36",
+        movimento: "Designada audiência de conciliação para 20/08/2024 às 14h00"
+      }
+    ]
+  }
+};
+
+const cloneProcessData = (processData: ProcessData, numero: string): ProcessData => ({
+  ...processData,
+  numero,
+  poloAtivo: processData.poloAtivo.map((parte) => ({ ...parte })),
+  poloPassivo: processData.poloPassivo.map((parte) => ({ ...parte })),
+  movimentacoes: processData.movimentacoes.map((movimentacao) => ({ ...movimentacao }))
+});
+
 export class PJEService {
   // URL do edge function para scraping em produção
   private static readonly SCRAPING_API_URL = "https://brzpdyrfjucjliqruvwa.supabase.co/functions/v1/pje-scraper";
@@ -41,75 +154,15 @@ export class PJEService {
     // Simula um delay de rede
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Dados simulados baseados na estrutura real do PJE-TJMG
-    const mockData: ProcessData = {
-      numero: numeroProcesso,
-      dataDistribuicao: "21/09/2022",
-      classeJudicial: "[CÍVEL] CUMPRIMENTO DE SENTENÇA (156)",
-      assunto: "DIREITO CIVIL (899) - Responsabilidade Civil (10431) - Indenização por Dano Moral (10433 DIREITO DO CONSUMIDOR (1156) - Responsabilidade do Fornecedor (6220) - Indenização por Dano Moral (7779 DIREITO DO CONSUMIDOR (1156) - Responsabilidade do Fornecedor (6220) - Indenização por Dano Material (7780",
-      jurisdicao: "Belo Horizonte",
-      orgaoJulgador: "CENTRASE Cível de Belo Horizonte - Central de Cumprimento de Sentenças",
-      poloAtivo: [
-        {
-          nome: "DIEGO LEONARDO DA SILVA ARMOND",
-          cpf: "115.451.116-26",
-          situacao: "Ativo",
-          tipo: "REQUERENTE"
-        }
-      ],
-      poloPassivo: [
-        {
-          nome: "OI S.A. - EM RECUPERAÇÃO JUDICIAL",
-          cnpj: "76.535.764/0001-43",
-          situacao: "Ativo",
-          tipo: "REQUERIDO(A)"
-        }
-      ],
-      movimentacoes: [
-        {
-          data: "03/09/2025 13.05.25",
-          movimento: "Juntada de Petição de petição"
-        },
-        {
-          data: "02/09/2025 00.26.53",
-          movimento: "Publicado Intimação em 02/09/2025"
-        },
-        {
-          data: "02/09/2025 00.26.53",
-          movimento: "Disponibilizado no DJ Eletrônico em 01/09/2025"
-        },
-        {
-          data: "29/08/2025 14.42.00",
-          movimento: "Expedida/certificada a comunicação eletrônica"
-        },
-        {
-          data: "22/04/2025 14.57.18",
-          movimento: "Juntada de Petição de petição"
-        },
-        {
-          data: "11/04/2025 13.55.11",
-          movimento: "Juntada de Petição de petição"
-        },
-        {
-          data: "29/03/2025 00.29.18",
-          movimento: "Decorrido prazo de OI S.A. - EM RECUPERAÇÃO JUDICIAL em 28/03/2025 23.59"
-        },
-        {
-          data: "19/03/2025 15.48.44",
-          movimento: "Juntada de Petição de petição"
-        }
-      ]
-    };
+    const numeroFormatado = this.formatarNumeroProcesso(numeroProcesso);
+    const processoSimulado = SIMULATED_PROCESSES[numeroFormatado];
 
-    // Verifica se o número do processo corresponde ao exemplo conhecido
-    if (numeroProcesso === "5202268-77.2022.8.13.0024") {
-      return mockData;
+    if (processoSimulado) {
+      return cloneProcessData(processoSimulado, numeroFormatado);
     }
 
-    // Para outros números, retorna dados genéricos
     return {
-      ...mockData,
-      numero: numeroProcesso,
+      numero: numeroFormatado,
       dataDistribuicao: "Data não disponível",
       classeJudicial: "Processo não encontrado ou dados indisponíveis",
       assunto: "Consulte o processo diretamente no site do PJE-TJMG",
